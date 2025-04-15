@@ -1,8 +1,8 @@
 from app.extensions import db
-from flask import Blueprint, Response
+from flask import Blueprint, Response, stream_with_context
 from http import HTTPStatus
-import json, datetime, time, random 
 from app.utils.helper import generate_event_stream
+import json, datetime
 bp = Blueprint('health', __name__, url_prefix='/api/v1')
 
 ### API ENDPOINTS ###
@@ -10,7 +10,7 @@ bp = Blueprint('health', __name__, url_prefix='/api/v1')
 def health():
     response_data = {
         "message": "healthy",
-        "timestamp": datetime.utcnow().isoformat() + "Z",  # UTC timestamp
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",  # UTC timestamp
     }
     return Response(
         json.dumps(response_data),
@@ -20,4 +20,4 @@ def health():
 
 @bp.route('/stream', methods=['GET'])
 def stream():
-    return Response(generate_event_stream(), content_type='text/event-stream')
+    return Response(stream_with_context(generate_event_stream()), content_type='text/event-stream')
