@@ -18,7 +18,6 @@ def generate_event_stream(max_duration_seconds=60):
                 "message": "Stream expired. Please reconnect for more data."
             }
             yield f"data: {json.dumps(final_message)}\n\n"
-            time.sleep(0.1)  # small delay to ensure delivery before closing
             break
         
         metric_type = random.choice(list(MetricType))
