@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  metrics-svc:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/metrics
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+    depends_on:
+      - db
+    volumes:
+      - .:/app  # Mount entire project directory
+      # Or for more specific mounting:
+      # - ./app:/app/app  # Mount only the app directory
+      # - ./migrations:/app/migrations
+      # - ./scripts:/app/scripts
+    command: sh /app/scripts/docker-entrypoint.sh
+
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Keep this for database persistence
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=metrics
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
