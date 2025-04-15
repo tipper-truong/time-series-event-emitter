@@ -1,19 +1,23 @@
-import json, datetime, time, random
-from app.models.event import MetricType
+from app.extensions import db
+from flask import Blueprint
+import json, datetime, time, random, logging
+from app.models.event import Event, MetricType
+from sqlalchemy.exc import SQLAlchemyError
 
-import json, datetime, time, random
-from app.models.event import MetricType
+bp = Blueprint('health', __name__, url_prefix='/api/v1')
 
-def generate_event_stream(max_duration_seconds=60):
+logger = logging.getLogger(__name__)
+
+def generate_event_stream(interval_secs=1, max_duration_secs=60):
     
     start_time = time.time()
     
     while True:
         current_time = time.time()
-        if current_time - start_time > max_duration_seconds:
+        if current_time - start_time > max_duration_secs:
             # Expire connection after max_duration_seconds
             final_message = {
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
                 "type": "stream_end",
                 "message": "Stream expired. Please reconnect for more data."
             }
@@ -29,11 +33,26 @@ def generate_event_stream(max_duration_seconds=60):
         elif metric_type == MetricType.FINANCIAL_STOCK:
             value = round(random.uniform(100.0, 1000.0), 2)  
         
+        current_timestamp = datetime.datetime.utcnow().isoformat() + "Z",
         event = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": current_timestamp,
             "metric": metric_type.value,  # Use the string value from the enum
             "value": value
         }
-        
+
+        try: 
+            db.session.add(Event(
+                        timestamp=current_timestamp,
+                        metric=metric_type,
+                        value=value
+                    )) 
+            db.session.commit()
+        except SQLAlchemyError as e:
+            logger.error(f"Database error while saving event: {str(e)}")
+            db.session.rollback()
+        except Exception as e:
+            logger.exception("Unexpected error while saving event")
+            db.session.rollback()
+
         yield f"data: {json.dumps(event)}\n\n"
-        time.sleep(1)  # emit every 1 second
+        time.sleep(interval_secs)  # emit every 1 second
